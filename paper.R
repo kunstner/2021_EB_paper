@@ -1002,7 +1002,7 @@ corr_df$p_clean[corr_df$p_clean >= 0.05] <- ""
 
 fig3_1 <- corr_df %>%
     dplyr::mutate(X = gsub(pattern = "_", replacement = " ", X)) %>%
-    dplyr::mutate(Y = gsub(pattern = "Leukozytes", replacement = "Leucozytes", Y)) %>%
+    dplyr::mutate(Y = gsub(pattern = "Leukozytes", replacement = "Leucocytes", Y)) %>%
     ggplot(data = ., aes(x=Treatment, y=factor(X, levels = rev(levels(factor(X)))), fill=rho)) +
     geom_tile()  +
     facet_wrap( Y ~ .) +
@@ -1057,7 +1057,7 @@ corr_genera <- corr_df$X[corr_df$p < 0.05]
 fig3_2 <- corr_df %>%
     dplyr::filter(X %in% corr_genera) %>%
     dplyr::mutate(X = gsub(pattern = "_", replacement = " ", X)) %>%
-    dplyr::mutate(Y = gsub(pattern = "Leukozytes", replacement = "Leucozytes", Y)) %>%
+    dplyr::mutate(Y = gsub(pattern = "Leukozytes", replacement = "Leucocytes", Y)) %>%
     dplyr::filter(X != "Unknown") %>%
     dplyr::filter(X != "Unclassified") %>%
     ggplot(data = ., aes(x=Treatment, y=factor(X, levels = rev(levels(factor(X)))), fill=rho)) +
