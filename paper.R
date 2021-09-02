@@ -28,6 +28,15 @@ ps
 
 sample_data(ps)$Shannon <- estimate_richness(ps, measures = "Shannon")$Shannon
 
+# Change RDEB subtype for selected cases ----------------------------------
+
+# EB20, EB35, EB36, EB37 (intermediate -> severe)
+ids <- c('EB20', 'EB35', 'EB36', 'EB37')
+cova <- sample_data(ps) %>% data.frame()
+cova$Severity[cova$MINIONID %in% ids] <- 'severe'
+sample_data(ps) <- cova
+rm(cova); rm(ids)
+
 # Set age groups ----------------------------------------------------------
 
 sample_data(ps)$AgeGroup <- NA
@@ -494,7 +503,7 @@ fig1_5 <- ggpubr::ggdotplot(data = alpha , x = "Location_Case", y = "Shannon",
           panel.background = element_blank(),
           axis.line = element_line(colour = "black"),
           strip.background = element_rect(colour="white", fill="white", size=1.5, linetype="solid")) +
-    ylim(0,10) +
+    ylim(0,7) +
     #ggpubr::stat_compare_means(method = "kruskal.test", label.y = 8) +
     stat_compare_means(comparisons = mycomp, label.y = c(6, 6))
 fig1_5
@@ -525,7 +534,7 @@ fig1_6 <- ggpubr::ggdotplot(data = alpha , x = "Age_Case", y = "Shannon",
           axis.text.y = element_text(size=12),
           axis.ticks.x=element_blank(),
           strip.background = element_rect(colour="white", fill="white", size=1.5, linetype="solid")) +
-    ylim(0,10) +
+    ylim(0,7) +
     #ggpubr::stat_compare_means(method = "kruskal.test", label.y = 8) +
     stat_compare_means(comparisons = mycomp, label.y = c(6, 6))
 fig1_6
@@ -794,7 +803,7 @@ fig2_3 <- ggpubr::ggdotplot(data = alpha , x = "Location_Severity", y = "Shannon
           panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
           panel.background = element_blank(),
           axis.line = element_line(colour = "black")) +
-    ylim(0,10) +
+    ylim(0,7) +
     #ggpubr::stat_compare_means(method = "kruskal.test", label.y = 8) +
     stat_compare_means(comparisons = mycomp, label.y = c(6, 6))
 fig2_3
@@ -1001,8 +1010,10 @@ corr_df$p_clean <- format( round(corr_df$p_clean, 4), scientific = F ) # avoid e
 corr_df$p_clean[corr_df$p_clean >= 0.05] <- ""
 
 fig3_1 <- corr_df %>%
+    dplyr::mutate(Treatment = factor(x = Treatment,
+                                     levels = c("Unwounded", "Wound", "Oral mucosa", "Stool"))) %>%
     dplyr::mutate(X = gsub(pattern = "_", replacement = " ", X)) %>%
-    dplyr::mutate(Y = gsub(pattern = "Leukozytes", replacement = "Leucocytes", Y)) %>%
+    dplyr::mutate(Y = gsub(pattern = "Leukozytes", replacement = "Leucozytes", Y)) %>%
     ggplot(data = ., aes(x=Treatment, y=factor(X, levels = rev(levels(factor(X)))), fill=rho)) +
     geom_tile()  +
     facet_wrap( Y ~ .) +
@@ -1055,9 +1066,11 @@ corr_df$p_clean[corr_df$p_clean >= 0.05] <- ""
 corr_genera <- corr_df$X[corr_df$p < 0.05]
 
 fig3_2 <- corr_df %>%
+    dplyr::mutate(Treatment = factor(x = Treatment,
+                                     levels = c("Unwounded", "Wound", "Oral mucosa", "Stool"))) %>%
     dplyr::filter(X %in% corr_genera) %>%
     dplyr::mutate(X = gsub(pattern = "_", replacement = " ", X)) %>%
-    dplyr::mutate(Y = gsub(pattern = "Leukozytes", replacement = "Leucocytes", Y)) %>%
+    dplyr::mutate(Y = gsub(pattern = "Leukozytes", replacement = "Leucozytes", Y)) %>%
     dplyr::filter(X != "Unknown") %>%
     dplyr::filter(X != "Unclassified") %>%
     ggplot(data = ., aes(x=Treatment, y=factor(X, levels = rev(levels(factor(X)))), fill=rho)) +
@@ -1115,6 +1128,8 @@ corr_df$p_clean <- format( round(corr_df$p_clean, 4), scientific = F ) # avoid e
 corr_df$p_clean[corr_df$p_clean >= 0.05] <- ""
 
 fig3_3 <- corr_df %>%
+    dplyr::mutate(Treatment = factor(x = Treatment,
+                                     levels = c("Unwounded", "Wound", "Oral mucosa", "Stool"))) %>%
     dplyr::mutate(X = gsub(pattern = "_", replacement = " ", X)) %>%
     ggplot(data = ., aes(x=Treatment, y=factor(X, levels = rev(levels(factor(X)))), fill=rho)) +
     geom_tile()  +
@@ -1172,6 +1187,8 @@ corr_df$p_clean[corr_df$p_clean >= 0.05] <- ""
 corr_genera <- corr_df$X[corr_df$p < 0.05]
 
 fig3_4 <- corr_df %>%
+    dplyr::mutate(Treatment = factor(x = Treatment,
+                                     levels = c("Unwounded", "Wound", "Oral mucosa", "Stool"))) %>%
     dplyr::filter(X %in% corr_genera) %>%
     dplyr::mutate(X = gsub(pattern = "_", replacement = " ", X)) %>%
     dplyr::filter(X != "Unknown") %>%
@@ -1231,6 +1248,8 @@ corr_df$p_clean <- format( round(corr_df$p_clean, 4), scientific = F ) # avoid e
 corr_df$p_clean[corr_df$p_clean >= 0.05] <- ""
 
 fig3_5 <- corr_df %>%
+    dplyr::mutate(Treatment = factor(x = Treatment,
+                                     levels = c("Unwounded", "Wound", "Oral mucosa", "Stool"))) %>%
     dplyr::mutate(X = gsub(pattern = "_", replacement = " ", X)) %>%
     dplyr::mutate(Y = gsub(pattern = "IFN.g", replacement = "IFN-gamma", Y)) %>%
     dplyr::mutate(Y = gsub(pattern = "IL.6", replacement = "IL-6", Y)) %>%
@@ -1291,6 +1310,8 @@ corr_df$p_clean[corr_df$p_clean >= 0.05] <- ""
 corr_genera <- corr_df$X[corr_df$p < 0.05]
 
 fig3_6 <- corr_df %>%
+    dplyr::mutate(Treatment = factor(x = Treatment,
+                                     levels = c("Unwounded", "Wound", "Oral mucosa", "Stool"))) %>%
     dplyr::filter(X %in% corr_genera) %>%
     dplyr::mutate(X = gsub(pattern = "_", replacement = " ", X)) %>%
     dplyr::mutate(Y = gsub(pattern = "IFN.g", replacement = "IFN-gamma", Y)) %>%
@@ -1818,7 +1839,7 @@ fig4_7 <- ggpubr::ggdotplot(data = alpha , x = "Location_Severity", y = "Shannon
           panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
           panel.background = element_blank(),
           axis.line = element_line(colour = "black")) +
-    ylim(0,10) +
+    ylim(0,7) +
     #ggpubr::stat_compare_means(method = "kruskal.test", label.y = 8) +
     stat_compare_means(comparisons = mycomp, label.y = c(6, 6))
 fig4_7
@@ -1855,7 +1876,7 @@ fig4_7a <- ggpubr::ggdotplot(data = alpha , x = "Location_Case", y = "Shannon",
           panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
           panel.background = element_blank(),
           axis.line = element_line(colour = "black")) +
-    ylim(0,10) +
+    ylim(0,7) +
     #ggpubr::stat_compare_means(method = "kruskal.test", label.y = 8) +
     stat_compare_means(comparisons = mycomp, label.y = c(6, 6))
 fig4_7a
