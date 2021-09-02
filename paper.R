@@ -1385,7 +1385,7 @@ df_s.tmp <- df_s %>%
 
 lm(formula = S_aureus ~ EBDASItotal, data = df_s.tmp ) %>% summary()
 
-m_sw <- lm(formula = S_aureus ~ ., data = df_s.tmp )
+m_sw <- lm(formula = log(S_aureus) ~ ., data = df_s.tmp )
 performance::model_performance(m_sw)
 summary(m_sw)
 
@@ -1397,7 +1397,7 @@ car::vif(selectedMod)
 sjPlot::tab_model(selectedMod, digits = 4, digits.p = 4)
 effectsize::eta_squared(car::Anova(selectedMod, type = 2), partial = FALSE, ci = 0.95)
 
-fig3_7 <- ggplot(df_s.tmp, aes(EBDASItotal, S_aureus)) +
+fig3_7 <- ggplot(df_s.tmp, aes(EBDASItotal, log(S_aureus)) ) +
     geom_point() +
     geom_smooth(method='lm') +
     theme(axis.line = element_line(colour = "black"),
@@ -1410,11 +1410,12 @@ fig3_7 <- ggplot(df_s.tmp, aes(EBDASItotal, S_aureus)) +
           strip.text.x = element_text(angle = 0, size = 12),
           axis.text.y = element_text(size=12),
           strip.background = element_rect(colour="white", fill="white", size=1.5, linetype="solid")) +
-    labs(x='EBDASI total', y='Rel. abundance S. aureus', title='') +
-    ylim(-0.5,1) +
+    labs(x='EBDASI total', y='log10(Rel. abundance S. aureus)', title='') +
+    #ylim(-0.5,1) +
     geom_hline(yintercept=0, linetype="dashed",
                color = "grey45", size = 1)
 fig3_7
+
 ggsave( filename = paste0("plots_paper/Fig3.Forearm_Disease_Model.pdf"), width = 6, height = 6 )
 
 # Wound
@@ -1425,7 +1426,7 @@ df_s.tmp <- df_s %>%
     dplyr::rename( S_aureus = S.aureus ) %>%
     dplyr::select( -Row.names, -MINIONID, -Location, -Age, -Gender, -Weight )
 
-m_sw <- lm(formula = S_aureus ~ ., data = df_s.tmp )
+m_sw <- lm(formula = log10(S_aureus) ~ ., data = df_s.tmp )
 performance::model_performance(m_sw)
 summary(m_sw)
 
