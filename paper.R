@@ -21,21 +21,15 @@ library(gridExtra)
 
 # get data ----------------------------------------------------------------
 
-ps <- readRDS(file = "data/phyloseq.ASV.RDS")
+ps <- readRDS(file = "phyloseq.ASV.RDS")
 ps
+
+myres <- list()
+
 
 # Estimate Alpha diversity ------------------------------------------------
 
 sample_data(ps)$Shannon <- estimate_richness(ps, measures = "Shannon")$Shannon
-
-# Change RDEB subtype for selected cases ----------------------------------
-
-# EB20, EB35, EB36, EB37 (intermediate -> severe)
-ids <- c('EB20', 'EB35', 'EB36', 'EB37')
-cova <- sample_data(ps) %>% data.frame()
-cova$Severity[cova$MINIONID %in% ids] <- 'severe'
-sample_data(ps) <- cova
-rm(cova); rm(ids)
 
 # Set age groups ----------------------------------------------------------
 
@@ -55,7 +49,7 @@ sample_data(ps) <- cova
 
 # Add new parameters ------------------------------------------------------
 
-cova <- gdata::read.xls(xls = "data/MINION-EB_DEB-data.xlsx")
+cova <- gdata::read.xls(xls = "../MINION-EB_DEB-data.xlsx")
 ps_sd <- sample_data(ps) %>% data.frame()
 ps_sd$ID <- rownames(ps_sd)
 dim(cova)
@@ -79,7 +73,7 @@ rm(cova); rm(ps_sd)
 
 # Add species information S. aureus ---------------------------------------
 
-staph <- gdata::read.xls(xls = "data/Staph_blast_asv.xlsx")
+staph <- gdata::read.xls(xls = "Staph_blast_asv.xlsx")
 staph <- staph %>%
     dplyr::filter(Blast > 99)
 tt <- tax_table(ps) %>% data.frame
@@ -93,6 +87,43 @@ tax_table(ps) <- as.matrix(tt)
 rm(tt)
 rm(staph)
 
+
+# Summary table Sample,  Age group,  Location -----------------------------
+
+s_tab <- sample_data(ps) %>% data.frame() %>%
+    dplyr::select(MINIONID, Gender, Severity, AgeGroup, Location)
+
+s_tab$AgeGroup[s_tab$AgeGroup == "01"] <- "0-4"
+s_tab$AgeGroup[s_tab$AgeGroup == "02"] <- "5-10"
+s_tab$AgeGroup[s_tab$AgeGroup == "03"] <- "11-22"
+
+s_tab$Forearm <- FALSE
+s_tab$Oral_mucosa <- FALSE
+s_tab$Stool <- FALSE
+s_tab$Wound <- FALSE
+
+s_tab$Forearm[s_tab$Location == "Forearm"] <- TRUE
+s_tab$Oral_mucosa[s_tab$Location == "Oral mucosa"] <- TRUE
+s_tab$Stool[s_tab$Location == "Stool"] <- TRUE
+s_tab$Wound[s_tab$Location == "Wound"] <- TRUE
+
+s_tab$Location <- NULL
+rownames(s_tab) <- NULL
+
+s_tab <- data.table::setDT(s_tab)[, .(Gender = unique(Gender),
+                                      Severity = unique(Severity),
+                                      AgeGroup = unique(AgeGroup),
+                                      Forearm = sum(Forearm, na.rm = TRUE),
+                                      Oral_mucosa = sum(Oral_mucosa, na.rm = TRUE),
+                                      Stool = sum(Stool, na.rm = TRUE),
+                                      Wound = sum(Wound, na.rm = TRUE)
+),
+by = MINIONID] %>%
+    data.frame()
+
+WriteXLS::WriteXLS(x = s_tab, ExcelFileName = "SupplementaryTable_Samples.xlsx", SheetNames = "Samples", BoldHeaderRow = T, FreezeRow = 1)
+
+
 # Define global variables and colors --------------------------------------
 
 seedID <- 1253
@@ -103,13 +134,17 @@ cols_heatmap <- circlize::colorRamp2(c(-1, 0, 1),  c("#2C7BB6", "white", "#D7191
 cols_serverity <- c("steelblue1", "red") #RDEBintermed, RDEBsevere
 
 taxNumberPlot <- 20
+#pals::pal.bands(pals::tableau20(taxNumberPlot))
+#cols <- pals::tableau20(taxNumberPlot+1)
 
 cols <- c( pals::glasbey(n = 32), "#666666", "#CCCCCC")
 cols[1] <- "#104E8B"
 cols[2] <- "#8B1A1A"
 cols[3] <- "#008B00"
+#cols <- pals::polychrome(n = 32)
 
-# pie( rep( 1,length(cols)), col=(cols) )
+#pal.test(cols)
+pie( rep( 1,length(cols)), col=(cols) )
 
 top_genera <- c("Abiotrophia", "Actinomyces", "Aggregatibacter", "Alistipes", "Anaerococcus", "Bacteroides", "Bifidobacterium", "Blautia A", "Corynebacterium", "Dialister", "Faecalibacterium", "Gemella", "Gemmiger", "Granulicatella", "Haemophilus", "Haemophilus D", "Kocuria", "Lentilactobacillus", "Leptotrichia", "Micrococcus", "Moraxella A", "Neisseria", "Oribacterium", "Phocaeicola", "Prevotella", "Pseudomonas H", "Rothia", "Ruminococcus E", "Staphylococcus", "Streptococcus", "Sutterella", "Unknown", "Veillonella", "Other")
 
@@ -503,7 +538,7 @@ fig1_5 <- ggpubr::ggdotplot(data = alpha , x = "Location_Case", y = "Shannon",
           panel.background = element_blank(),
           axis.line = element_line(colour = "black"),
           strip.background = element_rect(colour="white", fill="white", size=1.5, linetype="solid")) +
-    ylim(0,7) +
+    ylim(0,10) +
     #ggpubr::stat_compare_means(method = "kruskal.test", label.y = 8) +
     stat_compare_means(comparisons = mycomp, label.y = c(6, 6))
 fig1_5
@@ -534,7 +569,7 @@ fig1_6 <- ggpubr::ggdotplot(data = alpha , x = "Age_Case", y = "Shannon",
           axis.text.y = element_text(size=12),
           axis.ticks.x=element_blank(),
           strip.background = element_rect(colour="white", fill="white", size=1.5, linetype="solid")) +
-    ylim(0,7) +
+    ylim(0,10) +
     #ggpubr::stat_compare_means(method = "kruskal.test", label.y = 8) +
     stat_compare_means(comparisons = mycomp, label.y = c(6, 6))
 fig1_6
@@ -803,7 +838,7 @@ fig2_3 <- ggpubr::ggdotplot(data = alpha , x = "Location_Severity", y = "Shannon
           panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
           panel.background = element_blank(),
           axis.line = element_line(colour = "black")) +
-    ylim(0,7) +
+    ylim(0,10) +
     #ggpubr::stat_compare_means(method = "kruskal.test", label.y = 8) +
     stat_compare_means(comparisons = mycomp, label.y = c(6, 6))
 fig2_3
@@ -1010,10 +1045,8 @@ corr_df$p_clean <- format( round(corr_df$p_clean, 4), scientific = F ) # avoid e
 corr_df$p_clean[corr_df$p_clean >= 0.05] <- ""
 
 fig3_1 <- corr_df %>%
-    dplyr::mutate(Treatment = factor(x = Treatment,
-                                     levels = c("Unwounded", "Wound", "Oral mucosa", "Stool"))) %>%
     dplyr::mutate(X = gsub(pattern = "_", replacement = " ", X)) %>%
-    dplyr::mutate(Y = gsub(pattern = "Leukozytes", replacement = "Leucozytes", Y)) %>%
+    dplyr::mutate(Y = gsub(pattern = "Leukozytes", replacement = "Leucocytes", Y)) %>%
     ggplot(data = ., aes(x=Treatment, y=factor(X, levels = rev(levels(factor(X)))), fill=rho)) +
     geom_tile()  +
     facet_wrap( Y ~ .) +
@@ -1066,11 +1099,9 @@ corr_df$p_clean[corr_df$p_clean >= 0.05] <- ""
 corr_genera <- corr_df$X[corr_df$p < 0.05]
 
 fig3_2 <- corr_df %>%
-    dplyr::mutate(Treatment = factor(x = Treatment,
-                                     levels = c("Unwounded", "Wound", "Oral mucosa", "Stool"))) %>%
     dplyr::filter(X %in% corr_genera) %>%
     dplyr::mutate(X = gsub(pattern = "_", replacement = " ", X)) %>%
-    dplyr::mutate(Y = gsub(pattern = "Leukozytes", replacement = "Leucozytes", Y)) %>%
+    dplyr::mutate(Y = gsub(pattern = "Leukozytes", replacement = "Leucocytes", Y)) %>%
     dplyr::filter(X != "Unknown") %>%
     dplyr::filter(X != "Unclassified") %>%
     ggplot(data = ., aes(x=Treatment, y=factor(X, levels = rev(levels(factor(X)))), fill=rho)) +
@@ -1128,8 +1159,6 @@ corr_df$p_clean <- format( round(corr_df$p_clean, 4), scientific = F ) # avoid e
 corr_df$p_clean[corr_df$p_clean >= 0.05] <- ""
 
 fig3_3 <- corr_df %>%
-    dplyr::mutate(Treatment = factor(x = Treatment,
-                                     levels = c("Unwounded", "Wound", "Oral mucosa", "Stool"))) %>%
     dplyr::mutate(X = gsub(pattern = "_", replacement = " ", X)) %>%
     ggplot(data = ., aes(x=Treatment, y=factor(X, levels = rev(levels(factor(X)))), fill=rho)) +
     geom_tile()  +
@@ -1187,8 +1216,6 @@ corr_df$p_clean[corr_df$p_clean >= 0.05] <- ""
 corr_genera <- corr_df$X[corr_df$p < 0.05]
 
 fig3_4 <- corr_df %>%
-    dplyr::mutate(Treatment = factor(x = Treatment,
-                                     levels = c("Unwounded", "Wound", "Oral mucosa", "Stool"))) %>%
     dplyr::filter(X %in% corr_genera) %>%
     dplyr::mutate(X = gsub(pattern = "_", replacement = " ", X)) %>%
     dplyr::filter(X != "Unknown") %>%
@@ -1248,8 +1275,6 @@ corr_df$p_clean <- format( round(corr_df$p_clean, 4), scientific = F ) # avoid e
 corr_df$p_clean[corr_df$p_clean >= 0.05] <- ""
 
 fig3_5 <- corr_df %>%
-    dplyr::mutate(Treatment = factor(x = Treatment,
-                                     levels = c("Unwounded", "Wound", "Oral mucosa", "Stool"))) %>%
     dplyr::mutate(X = gsub(pattern = "_", replacement = " ", X)) %>%
     dplyr::mutate(Y = gsub(pattern = "IFN.g", replacement = "IFN-gamma", Y)) %>%
     dplyr::mutate(Y = gsub(pattern = "IL.6", replacement = "IL-6", Y)) %>%
@@ -1310,8 +1335,6 @@ corr_df$p_clean[corr_df$p_clean >= 0.05] <- ""
 corr_genera <- corr_df$X[corr_df$p < 0.05]
 
 fig3_6 <- corr_df %>%
-    dplyr::mutate(Treatment = factor(x = Treatment,
-                                     levels = c("Unwounded", "Wound", "Oral mucosa", "Stool"))) %>%
     dplyr::filter(X %in% corr_genera) %>%
     dplyr::mutate(X = gsub(pattern = "_", replacement = " ", X)) %>%
     dplyr::mutate(Y = gsub(pattern = "IFN.g", replacement = "IFN-gamma", Y)) %>%
@@ -1385,7 +1408,7 @@ df_s.tmp <- df_s %>%
 
 lm(formula = S_aureus ~ EBDASItotal, data = df_s.tmp ) %>% summary()
 
-m_sw <- lm(formula = log(S_aureus) ~ ., data = df_s.tmp )
+m_sw <- lm(formula = S_aureus ~ ., data = df_s.tmp )
 performance::model_performance(m_sw)
 summary(m_sw)
 
@@ -1397,7 +1420,7 @@ car::vif(selectedMod)
 sjPlot::tab_model(selectedMod, digits = 4, digits.p = 4)
 effectsize::eta_squared(car::Anova(selectedMod, type = 2), partial = FALSE, ci = 0.95)
 
-fig3_7 <- ggplot(df_s.tmp, aes(EBDASItotal, log(S_aureus)) ) +
+fig3_7 <- ggplot(df_s.tmp, aes(EBDASItotal, S_aureus)) +
     geom_point() +
     geom_smooth(method='lm') +
     theme(axis.line = element_line(colour = "black"),
@@ -1410,12 +1433,11 @@ fig3_7 <- ggplot(df_s.tmp, aes(EBDASItotal, log(S_aureus)) ) +
           strip.text.x = element_text(angle = 0, size = 12),
           axis.text.y = element_text(size=12),
           strip.background = element_rect(colour="white", fill="white", size=1.5, linetype="solid")) +
-    labs(x='EBDASI total', y='log10(Rel. abundance S. aureus)', title='') +
-    #ylim(-0.5,1) +
+    labs(x='EBDASI total', y='Rel. abundance S. aureus', title='') +
+    ylim(-0.5,1) +
     geom_hline(yintercept=0, linetype="dashed",
                color = "grey45", size = 1)
 fig3_7
-
 ggsave( filename = paste0("plots_paper/Fig3.Forearm_Disease_Model.pdf"), width = 6, height = 6 )
 
 # Wound
@@ -1426,7 +1448,7 @@ df_s.tmp <- df_s %>%
     dplyr::rename( S_aureus = S.aureus ) %>%
     dplyr::select( -Row.names, -MINIONID, -Location, -Age, -Gender, -Weight )
 
-m_sw <- lm(formula = log10(S_aureus) ~ ., data = df_s.tmp )
+m_sw <- lm(formula = S_aureus ~ ., data = df_s.tmp )
 performance::model_performance(m_sw)
 summary(m_sw)
 
@@ -1840,7 +1862,7 @@ fig4_7 <- ggpubr::ggdotplot(data = alpha , x = "Location_Severity", y = "Shannon
           panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
           panel.background = element_blank(),
           axis.line = element_line(colour = "black")) +
-    ylim(0,7) +
+    ylim(0,10) +
     #ggpubr::stat_compare_means(method = "kruskal.test", label.y = 8) +
     stat_compare_means(comparisons = mycomp, label.y = c(6, 6))
 fig4_7
@@ -1877,7 +1899,7 @@ fig4_7a <- ggpubr::ggdotplot(data = alpha , x = "Location_Case", y = "Shannon",
           panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
           panel.background = element_blank(),
           axis.line = element_line(colour = "black")) +
-    ylim(0,7) +
+    ylim(0,10) +
     #ggpubr::stat_compare_means(method = "kruskal.test", label.y = 8) +
     stat_compare_means(comparisons = mycomp, label.y = c(6, 6))
 fig4_7a
@@ -2185,9 +2207,72 @@ fig4_12 <- da_data %>%
 fig4_12
 ggsave(filename = paste0( outdir, "/Fig4_all.Diff_Abundance_Stool_Genus.pdf"), width = 4.5, height = 4.5)
 
+# Stool and gastrostomy ---------------------------------------------------
+
+#
+# Differential abundance analysis
+#
+
+siglevel <- 0.05
+location <- "Stool"
+
+ps_ra <- transform_sample_counts(ps, function(x){x / sum(x)})
+ps_sub <- subset_samples(ps, Location_Case == "Stool:TRUE")
+
+TAXLEVEL <- "Genus"
+da_corncob <-
+    corncob::differentialTest(formula = ~ Gastrostomy + Age,
+                              phi.formula = ~ Gastrostomy + Age, # model to be fitted to the dispersion
+                              formula_null = ~ Age, # Formula for mean under null, without response
+                              phi.formula_null = ~ Gastrostomy + Age, # Formula for overdispersion under null, without response
+                              test = "Wald", boot = FALSE, B = 0,
+                              data = ps_sub %>%  tax_glom(TAXLEVEL),
+                              fdr_cutoff = siglevel)
+da_corncob$significant_taxa
+corncob::otu_to_taxonomy(OTU = da_corncob$significant_taxa, data = ps, level = TAXLEVEL)
+da_plot <- plot(da_corncob, level = c("Phylum", "Genus")) +
+    #ggplot2::xlim(c(-10,10)) +
+    geom_point(size = 3)
+da_plot
+da_data <- data.frame(
+    Taxa = corncob::otu_to_taxonomy(OTU = da_corncob$significant_taxa, data = ps_sub, level = TAXLEVEL),
+    Taxa_veri = da_plot$data$taxa,
+    p_fdr = da_corncob$p_fdr[da_corncob$p_fdr < siglevel & !is.na(da_corncob$p_fdr) ],
+    Effect = da_plot$data$x,
+    Error_min = da_plot$data$xmin,
+    Error_max = da_plot$data$xmax
+)
+
+fig_S3 <- da_data %>%
+    dplyr::mutate(Taxa = gsub(pattern = "_", replacement = " ", Taxa)) %>%
+    ggplot(data = ., aes(x = Effect, y = factor(Taxa, levels = rev(levels(factor(Taxa)))))) +
+    geom_point(size = 3) +
+    geom_errorbar(aes(xmin=Error_min, xmax=Error_max), width=.3,
+                  position=position_dodge(.9)) +
+    geom_vline(xintercept=0, linetype="dashed",
+               color = "grey45", size = 1) +
+    theme(axis.line = element_line(colour = "black"),
+          legend.position = "none",
+          panel.grid.major = element_line(size = 0.25, linetype = 'solid',
+                                          colour = "grey85"),
+          panel.grid.minor = element_blank(),
+          panel.border = element_blank(),
+          panel.background = element_blank(),
+          axis.text.x = element_text(size=12),
+          strip.text.x = element_text(angle = 0, size = 12),
+          axis.text.y = element_text(size=12, face = "italic"),
+          #axis.ticks.x = element_blank(),
+          text = element_text(size = 12),
+          strip.background = element_rect(colour="white", fill="white", size=1.5, linetype="solid")
+    ) +
+    xlim(-11, 11) +
+    xlab("Effect size") + ylab("")
+fig_S3
+ggsave(filename = paste0( outdir, "/Supplementary_Figure_S3.pdf"), width = 4.5, height = 4.5, plot = fig_S3)
+
 # Save workspace ----------------------------------------------------------
 
-save.image(file='data/99_plots_paper.RData')
+save.image(file='99_plots_paper.RData')
 
 #
 # Some pretty panel plotting
@@ -2199,9 +2284,21 @@ save.image(file='data/99_plots_paper.RData')
 
 # Arrange plots -----------------------------------------------------------
 
-load(file = "data/99_plots_paper.RData")
+load(file = "99_plots_paper.RData")
 
 # Fig 1 (1..8) ------------------------------------------------------------
+
+# library(patchwork)
+# layout <- "
+# AABBB
+# CCDDD
+# EEFF#
+# "
+#
+# fig1_2 + fig1_4 + fig1_5 + fig1_6 + fig1_7 + fig1_8 +
+#     plot_layout(design = layout) +
+#     plot_annotation(tag_levels = 'A' )
+# ggsave(filename = "plots_paper/panelplot_Fig1.pdf", width = 30, height = 50, units = 'cm')
 
 lay <- rbind(c(1,1,2,2,3,3,3,4,4,4),
              c(1,1,2,2,3,3,3,4,4,4),
@@ -2295,3 +2392,4 @@ fig4_supp <- gridExtra::arrangeGrob(fig4_1, fig4_5, fig4_3,
                              x = c(0, 0.33, 0.66),
                              y = c(1,1,1))
 ggsave(filename = "plots_paper/panelplot_Fig4_supp.pdf", width = 40, height = 20, units = 'cm', plot = fig4_supp)
+
